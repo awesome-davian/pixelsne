@@ -52,18 +52,16 @@ bool Cell::containsPoint(double point[])
     return true;
 }
 
-PTree::PTree(unsigned int D, /*change*/double* inp_data, unsigned int N, unsigned int bins, int lv, int iter_cnt)
+PTree::PTree(unsigned int D, double* inp_data, unsigned int N, unsigned int bins, int lv, int iter_cnt)
 {
     // Compute mean, width, and height of current map (boundaries of SPTree)
     int nD = 0;
     int* mean_Y = (int*) calloc(D,  sizeof(int));
     for(int d = 0; d < D; d++) mean_Y[d] = (bins/2) - 1;
-    // for(int d = 0; d < D; d++) mean_Y[d] = (ROOT_PIXEL_WIDTH/2) - 1;
 
     // Construct PTree
     int* width = (int*) malloc(D * sizeof(int));
     for(int d = 0; d < D; d++) width[d] = bins/2;
-    // for(int d = 0; d < D; d++) width[d] = ROOT_PIXEL_WIDTH/2;
 
     init(NULL, D, inp_data, mean_Y, width, pixel_width, lv, iter_cnt);
     fill(N, iter_cnt);    // fill every data.
@@ -74,7 +72,7 @@ PTree::PTree(unsigned int D, /*change*/double* inp_data, unsigned int N, unsigne
 }
 
 // Constructor for PTree with particular size and parent -- build the tree, too!
-PTree::PTree(unsigned int D, /*change*/double* inp_data, unsigned int N, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt)
+PTree::PTree(unsigned int D, double* inp_data, unsigned int N, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt)
 {
     init(NULL, D, inp_data, inp_corner, inp_width, pixel_width, lv, iter_cnt);
     fill(N, iter_cnt);
@@ -82,38 +80,38 @@ PTree::PTree(unsigned int D, /*change*/double* inp_data, unsigned int N, int* in
 
 
 // Constructor for PTree with particular size (do not fill the tree)
-PTree::PTree(unsigned int D, /*change*/double* inp_data, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt)
+PTree::PTree(unsigned int D, double* inp_data, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt)
 {
     init(NULL, D, inp_data, inp_corner, inp_width, pixel_width, lv, iter_cnt);
 }
 
 
 // Constructor for PTree with particular size and parent (do not fill tree)
-PTree::PTree(PTree* inp_parent, unsigned int D, /*change*/double* inp_data, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt) {
+PTree::PTree(PTree* inp_parent, unsigned int D, double* inp_data, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt) {
     init(inp_parent, D, inp_data, inp_corner, inp_width, pixel_width, lv, iter_cnt);
 }
 
 
 // Constructor for PTree with particular size and parent -- build the tree, too!
-PTree::PTree(PTree* inp_parent, unsigned int D, /*change*/double* inp_data, unsigned int N, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt)
+PTree::PTree(PTree* inp_parent, unsigned int D, double* inp_data, unsigned int N, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt)
 {
     init(inp_parent, D, inp_data, inp_corner, inp_width, pixel_width, lv, iter_cnt);
     fill(N, iter_cnt);
 }
 
 // Main initialization function
-void PTree::init(PTree* inp_parent, unsigned int D, /*change*/double* inp_data, int* inp_corner, int* inp_width, unsigned int pix_width, int lv, int iter_cnt)
+void PTree::init(PTree* inp_parent, unsigned int D, double* inp_data, int* inp_corner, int* inp_width, unsigned int pix_width, int lv, int iter_cnt)
 {
     iter_count = iter_cnt;
     level = lv;
     parent = inp_parent;
     dimension = D;
-    no_children=(1<<D); // 2^d
+    no_children=(1<<D); 
     data = inp_data;
     size = 0;
     cum_size = 0;
 
-    pixel_width = pix_width; // 512
+    pixel_width = pix_width; 
 
     if (pixel_width == 1) {
         is_leaf = true;
@@ -153,7 +151,7 @@ PTree::~PTree()
 
 
 // Update the data underlying this tree
-void PTree::setData(/*change*/double* inp_data)
+void PTree::setData(double* inp_data)
 {
     data = inp_data;
 }
@@ -170,7 +168,7 @@ PTree* PTree::getParent()
 bool PTree::insert(unsigned int new_index, int iter_cnt)
 {
     // Ignore objects which do not belong in this quad tree
-    /*change*/double* point = data + new_index * dimension;
+    double* point = data + new_index * dimension;
  
     if(!boundary->containsPoint(point)) {
         return false;
@@ -263,7 +261,7 @@ void PTree::computeNonEdgeForces(unsigned int point_index, double theta, double 
         return;
 
     if (is_leaf == true) {
-        /*change*/double* point = data + point_index * dimension;
+        double* point = data + point_index * dimension;
         if (boundary->containsPoint(point))
             return;
     }
@@ -271,10 +269,9 @@ void PTree::computeNonEdgeForces(unsigned int point_index, double theta, double 
     // Compute distance between point and center-of-mass
     double D = .0;
     unsigned int ind = point_index * dimension;
-    for(unsigned int d = 0; d < dimension; d++) {buff[d] = data[ind + d] - boundary->getCorner(d); /*printf("[%d]buff[%d]: %f\n", ind, d, buff[d]);*/}
+    for(unsigned int d = 0; d < dimension; d++) {buff[d] = data[ind + d] - boundary->getCorner(d); }
     for(unsigned int d = 0; d < dimension; d++) D += buff[d] * buff[d];
-    // D = table[int(fabs(buff[0]) * (ybins+1) + fabs(buff[1]))];
-    // Check whether we can use this node as a "summary"
+
     int max_width = 0;
     int cur_width;
     for(unsigned int d = 0; d < dimension; d++) {
@@ -315,8 +312,8 @@ void PTree::computeEdgeForces(unsigned long long* row_P, unsigned long long* col
             ind2 = col_P[i] * dimension;
             for(unsigned int d = 0; d < dimension; d++) buff[d] = data[ind1 + d] - data[ind2 + d];
             for(unsigned int d = 0; d < dimension; d++) D += buff[d] * buff[d];
-            // D += table[int(fabs(buff[0]) * (ybins+1) + fabs(buff[1]))];
             D = val_P[i] * beta / D;
+
             // Sum positive force
             for(unsigned int d = 0; d < dimension; d++) pos_f[ind1 + d] += D * buff[d];
         }
@@ -329,11 +326,8 @@ void PTree::computeEdgeForces(unsigned long long* row_P, unsigned long long* col
 void PTree::print(int level) 
 {
     if(cum_size == 0) {
-        // printf("[%d]Empty node\n", me);
         return;
     }
-
-    //printf("cum_size: %d\n", cum_size);
 
     if(is_leaf) {
         printf("[%d]Leaf node; data = [", level);
@@ -343,11 +337,8 @@ void PTree::print(int level)
         }        
     }
     else {
-        //printf("[%d]Print Node [", level);
         for(int d = 0; d < dimension; d++) {
-         //   printf("(%d: c: %d, w: %d)", d, boundary->getCorner(d), boundary->getWidth(d));
         }
-        //printf("]; children are:\n");
         for(int i = 0; i < no_children; i++) 
             children[i]->print(level);
     }

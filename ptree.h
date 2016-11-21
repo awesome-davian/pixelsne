@@ -62,13 +62,10 @@ public:
     PTree(PTree* inp_parent, unsigned int D, double* inp_data, unsigned int N, int* inp_corner, int* inp_width, unsigned int pixel_width, int lv, int iter_cnt);
     ~PTree();
 
-    //void clean(unsigned int D, int* inp_data, int iter_cnt);
     void clean(int iter_cnt);
-
     void setData(double* inp_data);
     PTree* getParent();
     void construct(Cell boundary);
-    // bool insert(unsigned int new_index);
     bool insert(unsigned int new_index, int iter_cnt);
     void subdivide();
 

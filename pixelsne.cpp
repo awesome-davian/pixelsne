@@ -23,7 +23,7 @@ PixelSNE::~PixelSNE() {
     if (tree != NULL) delete tree;
 }
 
-void PixelSNE::run(double* X, int N, int D, /*change*/double* Y, int no_dims, double perplexity, double theta,
+void PixelSNE::run(double* X, int N, int D, double* Y, int no_dims, double perplexity, double theta,
                unsigned int bins, int p_method, int rand_seed, bool skip_random_init, int max_iter, int stop_lying_iter, 
                int mom_switch_iter) { 
 
@@ -61,7 +61,7 @@ void PixelSNE::run(double* X, int N, int D, /*change*/double* Y, int no_dims, do
     printf("Computing input similarities...\n");
     start = clock();
 
-    double* P=NULL;                      // conditional probability P.
+    double* P = NULL;                      
     unsigned long long* row_P = NULL;        
     unsigned long long* col_P = NULL;
     double* val_P = NULL;
@@ -141,14 +141,11 @@ void PixelSNE::run(double* X, int N, int D, /*change*/double* Y, int no_dims, do
         }
 
         clock_gettime(CLOCK_MONOTONIC, &end_p);
-
         double elapsed  = (double)(end_p.tv_sec - start_p.tv_sec) + (double)(end_p.tv_nsec - start_p.tv_nsec)/BILLION;
-
         printf("P training time: %.2f seconds!\n", elapsed);
     }
     end = clock();
-    //printf("end: %.2f, CLOCKS_PER_SEC: %.2f, elapsed: %.2f", end, CLOCKS_PER_SEC, (float)(end - start)/CLOCKS_PER_SEC);
-
+  
     // Lie about the P-values
     if(exact) { for(int i = 0; i < N * N; i++)        P[i] *= 12.0; }
     else {      for(int i = 0; i < row_P[N]; i++) val_P[i] *= 12.0; }
@@ -165,7 +162,6 @@ void PixelSNE::run(double* X, int N, int D, /*change*/double* Y, int no_dims, do
 
     double beta = bins * bins * 1e3;
     start = clock();
-
     tree = NULL;
 	
 	for(int iter = 0; iter < max_iter; iter++) {
@@ -221,14 +217,14 @@ void PixelSNE::run(double* X, int N, int D, /*change*/double* Y, int no_dims, do
     printf("Fitting performed in %4.2f seconds.\n", total_time);
 }
 
-void PixelSNE::computeGradient(double* P, unsigned long long* inp_row_P, unsigned long long* inp_col_P, double* inp_val_P, /*change*/double* Y, int N, int D, double* dC, 
+void PixelSNE::computeGradient(double* P, unsigned long long* inp_row_P, unsigned long long* inp_col_P, double* inp_val_P, double* Y, int N, int D, double* dC, 
     double theta, double beta, unsigned int bins, int iter_cnt){ 
     clock_t start, end;
 
     // Construct space-partitioning tree on current map
     start = clock();
     if (tree == NULL)
-        // tree = new PTree(D, Y, N, ROOT_PIXEL_WIDTH, 0, iter_cnt);
+        
         tree = new PTree(D, Y, N, bins, 0, iter_cnt);
     else {
         tree->clean(iter_cnt);
@@ -252,12 +248,10 @@ void PixelSNE::computeGradient(double* P, unsigned long long* inp_row_P, unsigne
     free(pos_f);
     free(neg_f);
     end = clock();
-    // printf("Computing gradient computed in %4.2f seconds!\n", (float) (end - start) / CLOCKS_PER_SEC);
-    
 }
 
 // Compute gradient of the t-SNE cost function (exact)
-void PixelSNE::computeExactGradient(double* P, /*change*/double* Y, int N, int D, double* dC) {
+void PixelSNE::computeExactGradient(double* P, double* Y, int N, int D, double* dC) {
 
 	// Make sure the current gradient contains zeros
 	for(int i = 0; i < N * D; i++) dC[i] = 0.0;
@@ -307,7 +301,7 @@ void PixelSNE::computeExactGradient(double* P, /*change*/double* Y, int N, int D
 
 
 // Evaluate t-SNE cost function (exactly)
-double PixelSNE::evaluateError(double* P, /*change*/double* Y, int N, int D) {
+double PixelSNE::evaluateError(double* P, double* Y, int N, int D) {
 
     // Compute the squared Euclidean distance matrix
     double* DD = (double*) malloc(N * N * sizeof(double));
@@ -343,7 +337,7 @@ double PixelSNE::evaluateError(double* P, /*change*/double* Y, int N, int D) {
 }
 
 // Evaluate t-SNE cost function (approximately)
-double PixelSNE::evaluateError(unsigned long long* row_P, unsigned long long* col_P, double* val_P, /*change*/double* Y, int N, int D, double theta, double beta, unsigned int bins, int iter_cnt)
+double PixelSNE::evaluateError(unsigned long long* row_P, unsigned long long* col_P, double* val_P, double* Y, int N, int D, double theta, double beta, unsigned int bins, int iter_cnt)
 {
 
     // Get estimate of normalization term
@@ -363,7 +357,6 @@ double PixelSNE::evaluateError(unsigned long long* row_P, unsigned long long* co
             for(int d = 0; d < D; d++) buff[d]  = Y[ind1 + d];
             for(int d = 0; d < D; d++) buff[d] -= Y[ind2 + d];
             for(int d = 0; d < D; d++) Q += buff[d] * buff[d];
-            // Q = (1.0 / (1.0 + Q)) / sum_Q;
             Q = (beta / (beta + Q)) / sum_Q;
             C += val_P[i] * log((val_P[i] + FLT_MIN) / (Q + FLT_MIN));
 
@@ -378,7 +371,7 @@ double PixelSNE::evaluateError(unsigned long long* row_P, unsigned long long* co
 
 
 // Compute input similarities with a fixed perplexity
-void PixelSNE::computeGaussianPerplexity(/*change*/double* X, int N, int D, double* P, double perplexity) {    
+void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, double* P, double perplexity) {    
 
 	// Compute the squared Euclidean distance matrixgoog
 	double* DD = (double*) malloc(N * N * sizeof(double)); // symmetric metrix
@@ -591,14 +584,14 @@ void PixelSNE::symmetrizeMatrix(unsigned long long** _row_P, unsigned long long*
     int* offset = (int*) calloc(N, sizeof(int));
     if(offset == NULL) { printf("Memory allocation failed!\n"); exit(1); }
     for(int n = 0; n < N; n++) {
-        for(unsigned int i = row_P[n]; i < row_P[n + 1]; i++) {                                  // considering element(n, col_P[i])
+        for(unsigned int i = row_P[n]; i < row_P[n + 1]; i++) {                        
 
             // Check whether element (col_P[i], n) is present
             bool present = false;
             for(unsigned int m = row_P[col_P[i]]; m < row_P[col_P[i] + 1]; m++) {
                 if(col_P[m] == n) {
                     present = true;
-                    if(n <= col_P[i]) {                                                 // make sure we do not add elements twice
+                    if(n <= col_P[i]) {                                                 
                         sym_col_P[sym_row_P[n]        + offset[n]]        = col_P[i];
                         sym_col_P[sym_row_P[col_P[i]] + offset[col_P[i]]] = n;
                         sym_val_P[sym_row_P[n]        + offset[n]]        = val_P[i] + val_P[m];
@@ -642,12 +635,12 @@ void PixelSNE::computeSquaredEuclideanDistance(double* X, int N, int D, double* 
     for(int n = 0; n < N; ++n, XnD += D) {
         const double* XmD = XnD + D;
         double* curr_elem = &DD[n*N + n];
-        *curr_elem = 0.0;                       // 초기화를 하면서 진행? --> matrix 생성시 초기화 하는 것이 좋음
+        *curr_elem = 0.0;                       
         double* curr_elem_sym = curr_elem + N;
         for(int m = n + 1; m < N; ++m, XmD+=D, curr_elem_sym+=N) {
             *(++curr_elem) = 0.0;
             for(int d = 0; d < D; ++d) {
-                *curr_elem += (XnD[d] - XmD[d]) * (XnD[d] - XmD[d]);    // compute distance and accumulate.
+                *curr_elem += (XnD[d] - XmD[d]) * (XnD[d] - XmD[d]);    
             }
             *curr_elem_sym = *curr_elem;
         }
@@ -723,13 +716,8 @@ double PixelSNE::minmax(double* X, int N, int D, double beta, unsigned int bins,
         nD += D;
     }
 
-    // xran = float(ROOT_PIXEL_WIDTH-1) / (max[0]);
-    // yran = float(ROOT_PIXEL_WIDTH-1) / (max[1]);
     xran = float(bins-1) / (max[0]);
     yran = float(bins-1) / (max[1]);
-
-    //if (iter_cnt < 10)
-        //printf("max[0]: %f, max[1]: %f\n", max[0], max[1]);
 
     ran = (xran < yran) ? xran : yran;
     beta = beta * pow(ran, 2);
@@ -780,19 +768,19 @@ bool PixelSNE::load_data(double** data, int* n, int* d, int* no_dims, double* th
         printf("Error: could not open data file.\n");
         return false;
     }
-    res = fread(n, sizeof(int), 1, h);                                            // number of datapoints
-    res = fread(d, sizeof(int), 1, h);                                            // original dimensionality
-    res = fread(theta, sizeof(double), 1, h);                                     // gradient accuracy
-    res = fread(perplexity, sizeof(double), 1, h);                                // perplexity
-    res = fread(no_dims, sizeof(int), 1, h);                                      // output dimensionality
-    res = fread(p_method, sizeof(int), 1, h);                                     // 1: vp-tree, 0: construct-knn
+    res = fread(n, sizeof(int), 1, h);                                            
+    res = fread(d, sizeof(int), 1, h);                                            
+    res = fread(theta, sizeof(double), 1, h);                                    
+    res = fread(perplexity, sizeof(double), 1, h);                               
+    res = fread(no_dims, sizeof(int), 1, h);                                      
+    res = fread(p_method, sizeof(int), 1, h);                                     
     res = fread(bins, sizeof(unsigned int), 1, h);
 
     *data = (double*) malloc(*d * *n * sizeof(double));
     if(*data == NULL) { printf("Memory allocation failed!\n"); exit(1); }
-    res = fread(*data, sizeof(double), *n * *d, h);                               // the data
+    res = fread(*data, sizeof(double), *n * *d, h);                               
 
-    if(!feof(h)) res = fread(rand_seed, sizeof(int), 1, h);                       // random seed
+    if(!feof(h)) res = fread(rand_seed, sizeof(int), 1, h);                      
     fclose(h);
     printf("Read the %i x %i data matrix successfully!\n", *n, *d);
 
@@ -824,18 +812,18 @@ void PixelSNE::save_data(double* data, int* landmarks, double* costs, int n, int
 int main() {
 
     // Define some variables
-    int     origN;                  // original input data size?
-    int     N;                      // input data size
-    int     D;                      // dimensionality(high dimension??)
-    int     no_dims;                // row dimension dimensionality
-    int*    landmarks;              // array of landmarks
-	double  perc_landmarks;         // ??
-    double  perplexity;             // (u), perplexity of conditional distribution
-    double  theta;                  // gradient accuracy
-    double* data;                   // the data
+    int     origN;                  
+    int     N;                      
+    int     D;                      
+    int     no_dims;                
+    int*    landmarks;              
+	double  perc_landmarks;         
+    double  perplexity;          
+    double  theta;                
+    double* data;                   
     unsigned int bins;
     int     p_method;
-    int rand_seed = 30;             // random seed
+    int rand_seed = 30;            
     PixelSNE* pixelsne = new PixelSNE();
 
     // Read the parameters and the dataset
@@ -843,12 +831,12 @@ int main() {
 		// Make dummy landmarks
         N = origN;
 
-        int* landmarks = (int*) malloc(N * sizeof(int));        // 모든 점을 Landmark로 설정. Paper에 모든 점을 사용한다고 되어 있음.
+        int* landmarks = (int*) malloc(N * sizeof(int));        
         if(landmarks == NULL) { printf("Memory allocation failed!\n"); exit(1); }
-        for(int n = 0; n < N; n++) landmarks[n] = n;            // Set dummy landmarks
+        for(int n = 0; n < N; n++) landmarks[n] = n;            
 
         double* Y = (double*) malloc(N * no_dims * sizeof(double)); 
-		double* costs = (double*) calloc(N, sizeof(double));          // 모든 점에 대한 cost
+		double* costs = (double*) calloc(N, sizeof(double));         
         if(Y == NULL || costs == NULL) { printf("Memory allocation failed!\n"); exit(1); }
         
         pixelsne->run(data, N, D, Y, no_dims, perplexity, theta, bins, p_method, rand_seed, false);
