@@ -13,7 +13,21 @@
 
 using namespace std;
 
+
 #define BILLION 1000000000L
+
+
+/*Op*/
+#define EXP_LUT_RANGE 10
+#define EXP_LUT_DIV 1000
+double *pexp;
+double fexp(double num)
+{
+	bool flag = false;
+	if (num <= -EXP_LUT_RANGE)return pexp[0];
+	if (num >= EXP_LUT_RANGE)return pexp[EXP_LUT_DIV - 1];
+	return pexp[(int)((num + EXP_LUT_RANGE)*EXP_LUT_DIV / EXP_LUT_RANGE / 2)];
+}
 
 PixelSNE::PixelSNE() {
 
@@ -395,7 +409,7 @@ void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, double* P, dou
 		while(!found && iter < 200) {
 
 			// Compute Gaussian kernel row
-			for(int m = 0; m < N; m++) P[nN + m] = exp(-beta * DD[nN + m]);
+			for(int m = 0; m < N; m++) P[nN + m] = fexp(-beta * DD[nN + m]);/*Op*/
 			P[nN + n] = DBL_MIN;
 
 			// Compute entropy of current row
@@ -491,7 +505,7 @@ void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, unsigned long 
         while(!found && iter < 200) {
 
             // Compute Gaussian kernel row
-            for(int m = 0; m < K; m++) cur_P[m] = exp(-beta * distances[m + 1] * distances[m + 1]);
+            for(int m = 0; m < K; m++) cur_P[m] = fexp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
 
             // Compute entropy of current row
             sum_P = DBL_MIN;
@@ -825,6 +839,22 @@ int main() {
     int     p_method;
     int rand_seed = 30;            
     PixelSNE* pixelsne = new PixelSNE();
+
+
+
+	/*Op*/
+	pexp = (double*)calloc(EXP_LUT_DIV, sizeof(double));
+	for (int i = 0; i < EXP_LUT_DIV; i++)
+	{
+		pexp[i] = exp((double)EXP_LUT_RANGE * ((double)(i << 1) / EXP_LUT_DIV - 1));
+	}
+
+
+
+
+
+
+
 
     // Read the parameters and the dataset
 	if(pixelsne->load_data(&data, &origN, &D, &no_dims, &theta, &perplexity, &bins, &p_method, &rand_seed)) {
