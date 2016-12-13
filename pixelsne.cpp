@@ -106,8 +106,6 @@ void PixelSNE::run(double* X, int N, int D, double* Y, int no_dims, double perpl
             p_model.run(out_dim, n_threads, n_samples, n_propagation, alpha, n_trees, n_negative, n_neighbors, n_gamma, perplexity);
             p_model.get_result(&row_P, &col_P, &val_P);
 
-            symmetrizeMatrix(&row_P, &col_P, &val_P, N);
-
             int need_log = 0;
             if (need_log){
                 FILE* fp_saved = fopen("saved_symmetrized.txt", "w+");
@@ -116,10 +114,12 @@ void PixelSNE::run(double* X, int N, int D, double* Y, int no_dims, double perpl
                 int idx = 0;
                 for(int n = 0; n < N; n++) {
                     for(int i = row_P[n]; i < row_P[n + 1]; i++) {
-                        ++idx;
+                        
 
                         sprintf(temp_str, "%lld %lld %f\n", row_P[n], col_P[idx], val_P[idx]);
                         fwrite(temp_str, strlen(temp_str), 1, fp_saved);
+
+                        ++idx;
                     }
                 }
 

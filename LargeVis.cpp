@@ -1,5 +1,7 @@
 #include "LargeVis.h"
 #include <map>
+#include <float.h>
+
 clock_t start, end;
 LargeVis::LargeVis()
 {
@@ -84,17 +86,18 @@ void LargeVis::load_from_data(double *data, long long n_vert, long long n_di)
 {
 	clean_data();
 	
-	vec = (real*) malloc(n_vert * n_di * sizeof(real));
+
+	vec = new real[n_vert * n_di];
     if(vec == NULL) { 
     	printf("Memory allocation failed!\n"); exit(1);
     }
 
-	int nD = 0;
-	for(long long n = 0; n < n_vert; n++) {
-		for(long long d = 0; d < n_di; d++) {
-			vec[nD + d] = data[nD + d];
+	//int nD = 0;
+	for(long long i = 0; i < n_vert; i++) {
+		for(long long j = 0; j < n_di; j++) {
+			vec[i * n_di + j] = data[i * n_di + j];
+
 		}
-        nD += n_di;
 	}
 	n_vertices = n_vert;
 	n_dim = n_di;
@@ -283,7 +286,7 @@ void LargeVis::annoy_thread(int id)
 	for (long long i = lo; i < hi; ++i)
 	{
 		cur_annoy_index->get_nns_by_item(i, n_neighbors + 1, (n_neighbors + 1) * n_trees, &knn_vec[i], NULL);
-		for (long long j = 0; j < knn_vec[i].size(); ++i)
+		for (long long j = 0; j < knn_vec[i].size(); ++j)
 			if (knn_vec[i][j] == i)
 			{
 				knn_vec[i].erase(knn_vec[i].begin() + j);
@@ -291,6 +294,8 @@ void LargeVis::annoy_thread(int id)
 			}
 	}
 	if (id > 0) delete cur_annoy_index;
+
+
 }
 
 void *LargeVis::annoy_thread_caller(void *arg)
@@ -304,12 +309,15 @@ void LargeVis::run_annoy()
 {
     printf("Running ANNOY ......"); fflush(stdout);
 	annoy_index = new AnnoyIndex<int, real, Euclidean, Kiss64Random>(n_dim);
+	
+	
 	for (long long i = 0; i < n_vertices; ++i)
 		annoy_index->add_item(i, &vec[i * n_dim]);
 	annoy_index->build(n_trees);
 	if (n_threads > 1) annoy_index->save("annoy_index_file");
-	knn_vec = new std::vector<int>[n_vertices];
 
+	knn_vec = new std::vector<int>[n_vertices];
+	
 	pthread_t *pt = new pthread_t[n_threads];
 	for (int j = 0; j < n_threads; ++j) pthread_create(&pt[j], NULL, LargeVis::annoy_thread_caller, new arg_struct(this, j));
 	for (int j = 0; j < n_threads; ++j) pthread_join(pt[j], NULL);
@@ -395,7 +403,8 @@ void LargeVis::compute_similarity_thread(int id)
 		lo_beta = hi_beta = -1;
 		for (iter = 0; iter < 200; ++iter)
 		{
-			H = sum_weight = 0;
+			H = 0;
+            sum_weight = FLT_MIN;
 			for (p = head[x]; p >= 0; p = next[p])
 			{
 				sum_weight += tmp = exp(-beta * edge_weight[p]);
@@ -408,12 +417,14 @@ void LargeVis::compute_similarity_thread(int id)
 				lo_beta = beta;
 				if (hi_beta < 0) beta *= 2; else beta = (beta + hi_beta) / 2;
 			}
-			else{
+			else
+			{
 				hi_beta = beta;
 				if (lo_beta < 0) beta /= 2; else beta = (lo_beta + beta) / 2;
 			}
-		}
-		for (p = head[x], sum_weight = 0; p >= 0; p = next[p])
+            if(beta > FLT_MAX) beta = FLT_MAX;
+        }
+		for (p = head[x], sum_weight = FLT_MIN; p >= 0; p = next[p])
 		{
 			sum_weight += edge_weight[p] = exp(-beta * edge_weight[p]);
 		}
@@ -490,6 +501,28 @@ void LargeVis::compute_similarity()
 	for (int j = 0; j < n_threads; ++j) pthread_join(pt[j], NULL);
 	delete[] pt;
 
+	for (x = 0; x < n_vertices; ++x)
+	{
+		for (p = head[x]; p >= 0; p = next[p])
+		{
+			y = edge_to[p];
+			q = reverse[p];
+			if (q == -1)
+			{
+				edge_from.push_back((int)y);
+				edge_to.push_back((int)x);
+				edge_weight.push_back(0);
+				next.push_back(head[y]);
+				reverse.push_back(p);
+				q = reverse[p] = head[y] = n_edge++;
+			}
+			if (x > y){
+				sum_weight += edge_weight[p] + edge_weight[q];
+				edge_weight[p] = edge_weight[q] = (edge_weight[p] + edge_weight[q]) / 2;
+			}
+		}
+	}
+
 	printf(" Done.\n");
 }
 
@@ -521,11 +554,13 @@ void LargeVis::test_accuracy()
 void LargeVis::construt_knn()
 {	
 	start = clock();
+
 	normalize();
 	run_annoy();
 	run_propagation();
 	test_accuracy();
 	compute_similarity();
+	
 	end = clock();
 	clock_t tt = end - start;
 	printf("construct_knn total time: %.2f secs.\n", (float)tt / CLOCKS_PER_SEC);
