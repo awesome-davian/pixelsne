@@ -742,10 +742,10 @@ double PixelSNE::minmax(double* X, int N, int D, double beta, unsigned int bins,
         for (int d = 0; d < D; d++) {
             
             if (0 == d) {
-                X[nD + d] = floor (X[nD + d] * xran) ;
+                X[nD + d] = X[nD + d] * xran ;
             }
             else{
-                X[nD + d] = floor (X[nD + d] * yran) ;
+                X[nD + d] = X[nD + d] * yran ;
             }
         }
         nD += D;
