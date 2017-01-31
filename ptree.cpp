@@ -54,16 +54,31 @@ bool Cell::containsPoint(double point[])
 
 PTree::PTree(unsigned int D, double* inp_data, unsigned int N, unsigned int bins, int lv, int iter_cnt)
 {
+
+    // #ifdef USE_BITWISE_OP
+    //     printf("ptree.cpp USE_BITWISE_OP\n");
+    // #else
+    //     printf("ptree.cpp not USE_BITWISE_OP\n");
+    // #endif
+
     // Compute mean, width, and height of current map (boundaries of SPTree)
     int nD = 0;
     int* mean_Y = (int*) calloc(D,  sizeof(int));
-//	for (int d = 0; d < D; d++) mean_Y[d] = (bins >> 1) - 1;/*Op*/
-    for(int d = 0; d < D; d++) mean_Y[d] = (bins/2) - 1;/*Op*/
+
+    #ifdef USE_BITWISE_OP
+        for (int d = 0; d < D; d++) mean_Y[d] = (bins >> 1) - 1;/*Op*/
+    #else
+        for(int d = 0; d < D; d++) mean_Y[d] = (bins/2) - 1;/*Op*/
+    #endif
 
     // Construct PTree
     int* width = (int*) malloc(D * sizeof(int));
-//	for (int d = 0; d < D; d++) width[d] = (bins >> 1);/*Op*/
-	for (int d = 0; d < D; d++) width[d] = (bins /2);/*Op*/
+
+    #ifdef USE_BITWISE_OP
+        for (int d = 0; d < D; d++) width[d] = (bins >> 1);/*Op*/
+    #else
+        for (int d = 0; d < D; d++) width[d] = (bins /2);/*Op*/
+    #endif
 
     init(NULL, D, inp_data, mean_Y, width, pixel_width, lv, iter_cnt);
     fill(N, iter_cnt);    // fill every data.
@@ -221,17 +236,31 @@ void PTree::subdivide() {
     // Create new children
     int* new_corner = (int*) malloc(dimension * sizeof(int));
     int* new_width  = (int*) malloc(dimension * sizeof(int));
-//	unsigned int new_pixel_width = (pixel_width >> 1); /*Op*/
-    unsigned int new_pixel_width = (pixel_width /2); /*Op*/
+
+    #ifdef USE_BITWISE_OP
+    	unsigned int new_pixel_width = (pixel_width >> 1); /*Op*/
+    #else
+        unsigned int new_pixel_width = (pixel_width /2); /*Op*/
+    #endif
+
     for(unsigned int i = 0; i < no_children; i++) {
         unsigned int div = 1;
         for(unsigned int d = 0; d < dimension; d++) {
             new_width[d] = .5 * boundary->getWidth(d);
-//			if (((i / div) & 1) == 1) new_corner[d] = boundary->getCorner(d) - .5 * boundary->getWidth(d); /*Op*/
-			if (((i / div) % 2) == 1) new_corner[d] = boundary->getCorner(d) - .5 * boundary->getWidth(d); /*Op*/
-			else                   new_corner[d] = boundary->getCorner(d) + .5 * boundary->getWidth(d);
-//			div = (div << 1);/*Op*/
-			div = (div *2);/*Op*/
+
+            #ifdef USE_BITWISE_OP
+    			if (((i / div) & 1) == 1) new_corner[d] = boundary->getCorner(d) - .5 * boundary->getWidth(d); /*Op*/
+            #else
+                if (((i / div) % 2) == 1) new_corner[d] = boundary->getCorner(d) - .5 * boundary->getWidth(d); /*Op*/
+            #endif
+			
+            else                   new_corner[d] = boundary->getCorner(d) + .5 * boundary->getWidth(d);
+
+            #ifdef USE_BITWISE_OP
+    			div = (div << 1);/*Op*/
+            #else
+                div = (div *2);/*Op*/
+            #endif
 		}
         children[i] = new PTree(this, dimension, data, new_corner, new_width, new_pixel_width, level+1, iter_count);
     }
@@ -284,8 +313,11 @@ void PTree::computeNonEdgeForces(unsigned int point_index, double theta, double 
         max_width = (max_width > cur_width) ? max_width : cur_width;
     }
 
-//	if (is_leaf || (max_width*max_width / D < theta*theta)) {/*Op*/
-    if(is_leaf || (max_width / sqrt(D) < theta)) {/*Op*/
+    #ifdef USE_BITWISE_OP
+    	if (is_leaf || (max_width*max_width / D < theta*theta)) {/*Op*/
+    #else
+        if(is_leaf || (max_width / sqrt(D) < theta)) {/*Op*/
+    #endif
         
         // Compute and add t-SNE force between point and current node
         D = beta / (beta + D);

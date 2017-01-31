@@ -409,8 +409,11 @@ void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, double* P, dou
 		while(!found && iter < 200) {
 
 			// Compute Gaussian kernel row
-//			for (int m = 0; m < N; m++) P[nN + m] = fexp(-beta * DD[nN + m]);/*Op*/
-			for(int m = 0; m < N; m++) P[nN + m] = exp(-beta * DD[nN + m]);/*Op*/
+            #ifdef USE_BITWISE_OP
+    			for (int m = 0; m < N; m++) P[nN + m] = fexp(-beta * DD[nN + m]);/*Op*/
+            #else
+                for(int m = 0; m < N; m++) P[nN + m] = exp(-beta * DD[nN + m]);/*Op*/
+            #endif
 			P[nN + n] = DBL_MIN;
 
 			// Compute entropy of current row
@@ -506,8 +509,11 @@ void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, unsigned long 
         while(!found && iter < 200) {
 
             // Compute Gaussian kernel row
-//			for (int m = 0; m < K; m++) cur_P[m] = fexp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
-			for (int m = 0; m < K; m++) cur_P[m] = exp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
+            #ifdef USE_BITWISE_OP
+    			for (int m = 0; m < K; m++) cur_P[m] = fexp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
+            #else
+                for (int m = 0; m < K; m++) cur_P[m] = exp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
+            #endif
 
             // Compute entropy of current row
             sum_P = DBL_MIN;
@@ -842,21 +848,22 @@ int main() {
     int rand_seed = 30;            
     PixelSNE* pixelsne = new PixelSNE();
 
-
+    // #ifdef USE_BITWISE_OP
+    //     printf("pixelsne.cpp USE_BITWISE_OP\n");
+    // #else
+    //     printf("pixelsne.cpp not USE_BITWISE_OP\n");
+    // #endif
 
 	/*Op*/
 	pexp = (double*)calloc(EXP_LUT_DIV, sizeof(double));
 	for (int i = 0; i < EXP_LUT_DIV; i++)
 	{
-		pexp[i] = exp((double)EXP_LUT_RANGE * ((double)(i << 1) / EXP_LUT_DIV - 1));
+        #ifdef USE_BITWISE_OP
+            pexp[i] = exp((double)EXP_LUT_RANGE * ((double)(i << 1) / EXP_LUT_DIV - 1));
+        #else
+            pexp[i] = exp((double)EXP_LUT_RANGE * ((double)(i * 2) / EXP_LUT_DIV - 1));
+        #endif
 	}
-
-
-
-
-
-
-
 
     // Read the parameters and the dataset
 	if(pixelsne->load_data(&data, &origN, &D, &no_dims, &theta, &perplexity, &bins, &p_method, &rand_seed)) {

@@ -1,6 +1,8 @@
 #ifndef PTREE_H
 #define PTREE_H
 
+//#define USE_BITWISE_OP
+
 using namespace std;
 
 class Cell {
