@@ -409,7 +409,8 @@ void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, double* P, dou
 		while(!found && iter < 200) {
 
 			// Compute Gaussian kernel row
-			for(int m = 0; m < N; m++) P[nN + m] = fexp(-beta * DD[nN + m]);/*Op*/
+//			for (int m = 0; m < N; m++) P[nN + m] = fexp(-beta * DD[nN + m]);/*Op*/
+			for(int m = 0; m < N; m++) P[nN + m] = exp(-beta * DD[nN + m]);/*Op*/
 			P[nN + n] = DBL_MIN;
 
 			// Compute entropy of current row
@@ -505,7 +506,8 @@ void PixelSNE::computeGaussianPerplexity(double* X, int N, int D, unsigned long 
         while(!found && iter < 200) {
 
             // Compute Gaussian kernel row
-            for(int m = 0; m < K; m++) cur_P[m] = fexp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
+//			for (int m = 0; m < K; m++) cur_P[m] = fexp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
+			for (int m = 0; m < K; m++) cur_P[m] = exp(-beta * distances[m + 1] * distances[m + 1]);/*Op*/
 
             // Compute entropy of current row
             sum_P = DBL_MIN;
