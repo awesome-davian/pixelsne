@@ -16,6 +16,8 @@ using namespace std;
 
 #define BILLION 1000000000L
 
+long long num_insert = 0;
+
 
 /*Op*/
 #define EXP_LUT_RANGE 10
@@ -87,8 +89,6 @@ void PixelSNE::run(double* X, int N, int D, double* Y, int no_dims, double perpl
     }
 
     else {  
-
-        FILE *flog = fopen("log.txt", "wb");
 
         struct timespec start_p, end_p;
 
@@ -237,9 +237,11 @@ void PixelSNE::computeGradient(double* P, unsigned long long* inp_row_P, unsigne
 
     // Construct space-partitioning tree on current map
     start = clock();
-    if (tree == NULL)
-        
+    if (tree == NULL){
         tree = new PTree(D, Y, N, bins, 0, iter_cnt);
+        //tree->print();
+        //printf("num_insert: %lld\n", num_insert);
+    }
     else {
         tree->clean(iter_cnt);
         tree->fill(N, iter_cnt);

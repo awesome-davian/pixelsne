@@ -5,6 +5,8 @@
 #include <cmath>
 #include "ptree.h"
 
+extern long long num_insert;
+
 // Constructs cell
 Cell::Cell(unsigned int inp_dimension) {
     dimension = inp_dimension;
@@ -55,6 +57,8 @@ bool Cell::containsPoint(double point[])
 PTree::PTree(unsigned int D, double* inp_data, unsigned int N, unsigned int bins, int lv, int iter_cnt)
 {
 
+    num_insert = 0;
+
     // #ifdef USE_BITWISE_OP
     //     printf("ptree.cpp USE_BITWISE_OP\n");
     // #else
@@ -80,7 +84,7 @@ PTree::PTree(unsigned int D, double* inp_data, unsigned int N, unsigned int bins
         for (int d = 0; d < D; d++) width[d] = (bins /2);/*Op*/
     #endif
 
-    init(NULL, D, inp_data, mean_Y, width, pixel_width, lv, iter_cnt);
+    init(NULL, D, inp_data, mean_Y, width, bins, lv, iter_cnt);
     fill(N, iter_cnt);    // fill every data.
     
     // Clean up memory
@@ -130,7 +134,10 @@ void PTree::init(PTree* inp_parent, unsigned int D, double* inp_data, int* inp_c
 
     pixel_width = pix_width; 
 
+    //printf("tree level: %d, pixel_width: %d\n", level, pixel_width);
+
     if (pixel_width == 1) {
+        //printf("pixel_width = 1, level: %d\n", level);
         is_leaf = true;
     } else {
         is_leaf = false;
@@ -184,6 +191,13 @@ PTree* PTree::getParent()
 // Insert a point into the PTree
 bool PTree::insert(unsigned int new_index, int iter_cnt)
 {
+
+    if (is_leaf) {
+        size++;
+        num_insert++;
+        return true;
+    } 
+
     // Ignore objects which do not belong in this quad tree
     double* point = data + new_index * dimension;
  
@@ -191,38 +205,35 @@ bool PTree::insert(unsigned int new_index, int iter_cnt)
         return false;
     }
 
-    // Online update of cumulative size and center-of-mass
+    num_insert++;
     cum_size++;
-    if (is_leaf) {
-        size++;
-        return true;
-    } else {
-        bool hasPoint = false;
-        for (int i = 0 ; i < no_children ; i++) {       
-            if (children[i] != NULL){
-                hasPoint = true;
-                break;
-            }
+    
+    bool hasPoint = false;
+    for (int i = 0 ; i < no_children ; i++) {       
+        if (children[i] != NULL){
+            hasPoint = true;
+            break;
         }
-        if (hasPoint == false){
-            subdivide();
+    }
+    if (hasPoint == false){
+        subdivide();
+    } 
+
+    bool isOldTree = false;
+    for (int i = 0 ; i < no_children ; i++) {       
+        if (children[i]->iter_count < iter_count) {
+            isOldTree = true;
+            continue;
         }
-        bool isOldTree = false;
-        for (int i = 0 ; i < no_children ; i++) {       
-            if (children[i]->iter_count < iter_count) {
-                isOldTree = true;
-                continue;
-            }
-        }
-        if (isOldTree == true) {
-            for(unsigned int i = 0; i < no_children; i++) {
-                children[i]->clean(iter_cnt);
-            }
-        }
-        // Find out where the point can be inserted
+    }
+    if (isOldTree == true) {
         for(unsigned int i = 0; i < no_children; i++) {
-            if(children[i]->insert(new_index, iter_cnt)) return true;
+            children[i]->clean(iter_cnt);
         }
+    }
+    // Find out where the point can be inserted
+    for(unsigned int i = 0; i < no_children; i++) {
+        if(children[i]->insert(new_index, iter_cnt)) return true;
     }
 
     // Otherwise, the point cannot be inserted (this should never happen)
@@ -240,8 +251,10 @@ void PTree::subdivide() {
     #ifdef USE_BITWISE_OP
     	unsigned int new_pixel_width = (pixel_width >> 1); /*Op*/
     #else
-        unsigned int new_pixel_width = (pixel_width /2); /*Op*/
+        unsigned int new_pixel_width = (pixel_width / 2); /*Op*/
     #endif
+
+    // printf("subdivide, level: %d\n", level);
 
     for(unsigned int i = 0; i < no_children; i++) {
         unsigned int div = 1;
@@ -254,14 +267,16 @@ void PTree::subdivide() {
                 if (((i / div) % 2) == 1) new_corner[d] = boundary->getCorner(d) - .5 * boundary->getWidth(d); /*Op*/
             #endif
 			
-            else                   new_corner[d] = boundary->getCorner(d) + .5 * boundary->getWidth(d);
+            else
+                new_corner[d] = boundary->getCorner(d) + .5 * boundary->getWidth(d);
 
             #ifdef USE_BITWISE_OP
     			div = (div << 1);/*Op*/
             #else
-                div = (div *2);/*Op*/
+                div = (div * 2);/*Op*/
             #endif
 		}
+
         children[i] = new PTree(this, dimension, data, new_corner, new_width, new_pixel_width, level+1, iter_count);
     }
     free(new_corner);
@@ -284,7 +299,6 @@ unsigned int PTree::getDepth() {
     for(unsigned int i = 0; i < no_children; i++) depth = fmax(depth, children[i]->getDepth());
     return 1 + depth;
 }
-
 
 // Compute non-edge forces using Barnes-Hut algorithm
 void PTree::computeNonEdgeForces(unsigned int point_index, double theta, double neg_f[], double* sum_Q, double beta, int iter_cnt)
@@ -361,24 +375,32 @@ void PTree::computeEdgeForces(unsigned long long* row_P, unsigned long long* col
 
 // Print out tree
 
-void PTree::print(int level) 
+void PTree::print() 
 {
-    if(cum_size == 0) {
-        return;
-    }
+    // if(cum_size == 0) {
+    //     printf("[%d]Empty node\n", level);
+    //     return;
+    // }
+
+    //printf("level: %d, is_leaf: %d\n", level, is_leaf);
+
+    if (level == 0)
+        printf("total data size: %d\n", cum_size);
 
     if(is_leaf) {
-        printf("[%d]Leaf node; data = [", level);
-        for(int i = 0; i < size; i++) {
-            if(i < size - 1) printf("\n");
-            else printf("]\n");
-        }        
+        printf("Leaf node: %d, size: %d\n", level, size);
+        // printf("[%d]Leaf node; data = [", level);
+        // for(int i = 0; i < size; i++) {
+        //     if(i < size - 1) printf("%.3f, ", data[i]);
+        //     else printf("]\n");
+        // }
     }
     else {
-        for(int d = 0; d < dimension; d++) {
-        }
+        // for(int d = 0; d < dimension; d++) {
+        // }
         for(int i = 0; i < no_children; i++) 
-            children[i]->print(level);
+            if (children[i] != NULL)
+                children[i]->print();
     }
 }
 
