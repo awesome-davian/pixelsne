@@ -328,9 +328,9 @@ void PTree::computeNonEdgeForces(unsigned int point_index, double theta, double 
     }
 
     #ifdef USE_BITWISE_OP
-    	if (is_leaf || (max_width*max_width / D < theta*theta)) {/*Op*/
+    	if (is_leaf || (D!=0 && (max_width*max_width / D < theta*theta))) {/*Op*/
     #else
-        if(is_leaf || (max_width / sqrt(D) < theta)) {/*Op*/
+        if (is_leaf || (D!=0 && (max_width / sqrt(D) < theta))) {/*Op*/
     #endif
         
         // Compute and add t-SNE force between point and current node
