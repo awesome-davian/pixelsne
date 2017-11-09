@@ -20,3 +20,15 @@ numDims = 2; pcaDims = 50; perplexity = 50; theta = .5; alg = 'svd'; p_method = 
 map=fast_pixelsne(digits', numDims, pcaDims, perplexity, theta, alg, p_method, bins);
 gscatter(map(:,1), map(:,2), labels');
 ```
+
+# Results #
+
+![Figure1](supplemental/Figure1.png)
+
+![Figure2](supplemental/Figure2.png)
+
+![Figure3](supplemental/Figure3.png)
+
+![Figure4](supplemental/Figure4.png)
+
+![Figure5](supplemental/Figure5.png)
